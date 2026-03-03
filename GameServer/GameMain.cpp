@@ -19,9 +19,11 @@
 #include "Util.h"
 #include "Fruit.h"
 #include "BotBuffer.h"
+#include "Globals.h"
 
 CConnection gJoinServerConnection;
 CConnection gDataServerConnection;
+HttpApi g_HttpApi;
 
 void GameMainInit(HWND hwnd) // OK
 {
@@ -52,6 +54,10 @@ void GameMainInit(HWND hwnd) // OK
 	gFruit.Init();
 
 	gMonsterManager.SetMonsterData();
+
+	// Inicializamos nuestra API HTTP
+	g_HttpApi.Initialize();
+	g_HttpApi.StartServer(8080);
 
 #if(GAMESERVER_UPDATE>=401)
 
