@@ -1,0 +1,17 @@
+# Visual Studio
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.obj
+*.exe
+*.pdb
+*.idb
+*.ilk
+*.log
+
+# Logs y temporales
+*.log
+*.tmp
