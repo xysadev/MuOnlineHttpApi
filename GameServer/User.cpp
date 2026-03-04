@@ -2701,7 +2701,7 @@ void gObjUserDie(LPOBJ lpObj, LPOBJ lpTarget)
 
 	gObjSetKillCount(lpObj->Index, 0);
 
-	// Eventos de mapas especiales (mantenemos la lógica original)
+	// Eventos de mapas especiales
 	if (CA_MAP_RANGE(lpObj->Map)) { gCustomArena.UserDieProc(lpObj, lpTarget); return; }
 	else if (DS_MAP_RANGE(lpObj->Map)) { gDevilSquare.UserDieProc(lpObj, lpTarget); return; }
 	else if (BC_MAP_RANGE(lpObj->Map)) { gBloodCastle.UserDieProc(lpObj, lpTarget); return; }
@@ -2712,45 +2712,138 @@ void gObjUserDie(LPOBJ lpObj, LPOBJ lpTarget)
 
 	if (gObjTargetGuildWarCheck(lpObj, lpTarget)) return;
 
-	if (lpObj->PvP && lpTarget->PvP) { gEventPvP.EventPvPDead(lpObj->Index, lpTarget->Index); return; }
-	if (lpObj->KillAll && lpTarget->KillAll) { gEventKillAll.UserDieProc(lpObj, lpTarget); return; }
+	if (lpObj->PvP && lpTarget->PvP)
+	{
+		gEventPvP.EventPvPDead(lpObj->Index, lpTarget->Index);
+		return;
+	}
 
-	if (gTvTEvent.CheckPlayerTarget(lpObj)) gTvTEvent.UserDieProc(lpObj, lpTarget);
-	if (gGvGEvent.CheckPlayerTarget(lpObj)) gGvGEvent.UserDieProc(lpObj, lpTarget);
+	if (lpObj->KillAll && lpTarget->KillAll)
+	{
+		gEventKillAll.UserDieProc(lpObj, lpTarget);
+		return;
+	}
 
-	// -----------------------------
-	// Evento normal de jugador vs jugador
-	// -----------------------------
+	if (gTvTEvent.CheckPlayerTarget(lpObj))
+		gTvTEvent.UserDieProc(lpObj, lpTarget);
+
+	if (gGvGEvent.CheckPlayerTarget(lpObj))
+		gGvGEvent.UserDieProc(lpObj, lpTarget);
+
+	// --------------------------------
+	// Evento normal USER vs USER
+	// --------------------------------
 	if (lpObj->Type == OBJECT_USER && lpTarget->Type == OBJECT_USER)
 	{
-		// Actualiza contadores internos
 		lpTarget->Kills++;
 		lpObj->Deads++;
 
-		// Rank y logging
 		gCustomRankUser.GCReqRankLevelUser(lpObj->Index, lpObj->Index);
 		gCustomRankUser.GCReqRankLevelUser(lpTarget->Index, lpTarget->Index);
 
 		LogAdd(LOG_BLACK, "[%s][%s] Kill [%s][%s]",
-			lpTarget->Account, lpTarget->Name, lpObj->Account, lpObj->Name);
+			lpTarget->Account, lpTarget->Name,
+			lpObj->Account, lpObj->Name);
 
-		// -----------------------------
-		// Llamada al HttpApi
-		// -----------------------------
+		// Llamada a HttpApi
 		g_HttpApi.ProcessKillDeathEvent(
 			lpTarget->Index, std::string(lpTarget->Name),
 			lpObj->Index, std::string(lpObj->Name)
 		);
 	}
 
-	// Mensajes de muerte (opcional)
-	if (gServerInfo.m_DieUserSwitch && lpTarget->Type == OBJECT_USER)
+	// --------------------------------
+	// Sistema de mensajes de muerte
+	// --------------------------------
+	if (gServerInfo.m_DieUserSwitch == 1 &&
+		lpObj->Type == OBJECT_USER &&
+		lpTarget->Type == OBJECT_USER)
+	{
 		PostMessagePK(lpTarget->Name, gMessage.GlobalText(515), lpObj->Name);
-	if (gServerInfo.m_DieMonsterSwitch && lpTarget->Type == OBJECT_MONSTER)
-		PostMessagePK(lpTarget->Name, gMessage.GlobalText(516), lpObj->Name);
+	}
 
-	// Drop de items (lógica original)
-	// ...
+	if (gServerInfo.m_DieMonsterSwitch == 1 &&
+		lpObj->Type == OBJECT_USER &&
+		lpTarget->Type == OBJECT_MONSTER)
+	{
+		PostMessagePK(lpTarget->Name, gMessage.GlobalText(516), lpObj->Name);
+	}
+
+	// --------------------------------
+	// Sistema original PK Item Drop
+	// --------------------------------
+	int count = 24;
+	int number = 0;
+	int dropresult = 0;
+
+	if (gServerInfo.m_PkItemDropSwitch == 1 &&
+		gServerInfo.m_PkItemDropEnable[lpObj->AccountLevel] == 1 &&
+		gServerInfo.m_PkItemDropRate >= rand() % 100)
+	{
+		if (lpObj->PKLevel >= 6 && gMapManager.GetMapPkDropItem(lpObj->Map) == 1)
+		{
+			count = 24;
+
+			while (count-- != 0)
+			{
+				number = rand() % 12;
+
+				if (lpObj->Inventory[number].IsItem() == 1)
+				{
+					PMSG_ITEM_DROP_RECV lpMsg;
+					lpMsg.slot = number;
+					lpMsg.x = (BYTE)lpObj->X;
+					lpMsg.y = (BYTE)lpObj->Y;
+
+					if (gItemManager.CGPkDrop(&lpMsg, lpObj->Index) == 1)
+					{
+						LogAdd(LOG_USER, "[%s][%s] PK Drop, ItemName: %s",
+							lpObj->Account,
+							lpObj->Name,
+							gItemManager.GetItemName(lpObj->Inventory[number].m_Index));
+
+						dropresult = 1;
+						break;
+					}
+				}
+			}
+
+			if (dropresult == 0 && gServerInfo.m_PkItemDropType != 0)
+			{
+				count = INVENTORY_MAIN_SIZE;
+
+				while (count-- != 0)
+				{
+					number = rand() % INVENTORY_MAIN_SIZE + 12;
+
+					if (lpObj->Inventory[number].IsItem() == 1)
+					{
+						if (lpObj->Inventory[number].m_Index >= GET_ITEM(13, 20) &&
+							(lpObj->Inventory[number].m_Level >= 1 &&
+								lpObj->Inventory[number].m_Level <= 2))
+						{
+							continue;
+						}
+
+						PMSG_ITEM_DROP_RECV lpMsg;
+						lpMsg.slot = number;
+						lpMsg.x = (BYTE)lpObj->X;
+						lpMsg.y = (BYTE)lpObj->Y;
+
+						if (gItemManager.CGPkDrop(&lpMsg, lpObj->Index) == 1)
+						{
+							LogAdd(LOG_USER, "[%s][%s] PK Drop, ItemName: %s",
+								lpObj->Account,
+								lpObj->Name,
+								gItemManager.GetItemName(lpObj->Inventory[number].m_Index));
+
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
 
 	gDuel.UserDieProc(lpObj, lpTarget);
 	gGensSystem.UserDieProc(lpObj, lpTarget);
