@@ -56,7 +56,7 @@ void GameMainInit(HWND hwnd) // OK
 	gMonsterManager.SetMonsterData();
 
 	// Inicializamos nuestra API HTTP
-	g_HttpApi.Initialize();
+	//g_HttpApi.Initialize();
 	g_HttpApi.StartServer(8080);
 
 #if(GAMESERVER_UPDATE>=401)
