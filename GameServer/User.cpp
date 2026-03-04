@@ -1621,7 +1621,7 @@ short gObjDel(int aIndex) // OK
 	}
 
 	lpObj->Connected = OBJECT_OFFLINE;
-
+	//gEffectManager.ClearAllEffect(lpObj);
 	gObjFreeData(aIndex);
 
 	return aIndex;

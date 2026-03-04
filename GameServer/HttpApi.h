@@ -1,15 +1,11 @@
 #pragma once
-#include "stdafx.h"
 #include <winsock2.h>
 #include <thread>
-#include <string>
-#include <vector>
 #include <mutex>
-#include <deque>
+#include <array>
+#include <string>
 
-
-
-#pragma comment(lib, "ws2_32.lib")
+#define MAX_EVENTS 100
 
 struct KillEvent
 {
@@ -26,20 +22,26 @@ public:
     ~HttpApi();
 
     void Initialize();
-    void StartServer(int port = 8080);
-    void ProcessKillDeathEvent(int killerIndex, const std::string& killerName,
-        int deadIndex, const std::string& deadName);
+    void StartServer(int port);
+
+    void ProcessKillDeathEvent(int killerIndex,
+        const std::string& killerName,
+        int deadIndex,
+        const std::string& deadName);
 
 private:
     void ServerLoop();
     void HandleClient(SOCKET clientSock);
     std::string GetJsonEvents();
 
+private:
     SOCKET listenSock;
-    bool running;
     std::thread serverThread;
-    std::deque<KillEvent> events;
-    std::mutex eventsMutex;
+    bool running;
 
-    static constexpr size_t MAX_EVENTS = 100;
+    std::array<KillEvent, MAX_EVENTS> events;
+    size_t head;
+    size_t count;
+
+    std::mutex eventsMutex;
 };
