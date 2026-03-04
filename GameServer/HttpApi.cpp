@@ -86,10 +86,9 @@ void HttpApi::ProcessKillDeathEvent(int killerIndex, const std::string& killerNa
     KillEvent evt{ killerIndex, killerName, deadIndex, deadName };
     events.push_back(evt);
 
-    // Mantener máximo 100 eventos
     if (events.size() > MAX_EVENTS)
     {
-        events.erase(events.begin());
+        events.pop_front();
     }
 }
 

@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <deque>
+
+
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -35,7 +38,7 @@ private:
     SOCKET listenSock;
     bool running;
     std::thread serverThread;
-    std::vector<KillEvent> events;
+    std::deque<KillEvent> events;
     std::mutex eventsMutex;
 
     static constexpr size_t MAX_EVENTS = 100;
